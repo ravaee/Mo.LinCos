@@ -166,7 +166,18 @@ table.grid { width: 100%; border-collapse: collapse; table-layout: auto; }
 .spark { width: 100%; height: 34px; display: block; margin-top: 2px; }
 .bar { height: 7px; background: var(--soft); border-radius: 4px; overflow: hidden; display: flex; flex: none; }
 .bar i { display: block; height: 100%; }
-.overview-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 14px; flex: 1; min-height: 0; }
+.overview-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr); gap: 14px; flex: 1; min-height: 0; }
+.memsum { padding: 10px 14px; border-bottom: 1px solid var(--line); display: grid; gap: 6px; flex: none; }
+.memsum .bar { height: 10px; }
+.share { display: inline-block; width: 70px; vertical-align: middle; }
+.share .bar { height: 6px; }
+/* Logs page: the list of sources and the log */
+.logs { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 14px; flex: 1; min-height: 0; }
+.logsrc { display: flex; align-items: center; gap: 8px; padding: 6px 14px; cursor: pointer; white-space: nowrap; min-width: 0; }
+.logsrc:hover { background: var(--hover); }
+.logsrc.on { background: var(--soft); font-weight: 600; }
+.logsrc .name { overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+.logsrc .muted { margin-left: auto; font-weight: 400; min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
 
 .finding { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 2px 8px; padding: 9px 14px; border-bottom: 1px solid var(--line); align-items: start; }
 .finding:last-child { border-bottom: 0; }
@@ -193,7 +204,7 @@ table.grid { width: 100%; border-collapse: collapse; table-layout: auto; }
 .ccard .line b { color: var(--text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
 .ccard .links { display: flex; gap: 6px; margin-top: 2px; }
 
-.head-strip { display: flex; align-items: center; gap: 18px; flex: none; min-width: 0; flex-wrap: nowrap; overflow: hidden; }
+.head-strip { display: flex; align-items: center; gap: 8px 18px; flex: none; min-width: 0; flex-wrap: wrap; }
 .head-strip .stat { display: grid; line-height: 1.2; white-space: nowrap; }
 /* the name: takes the room left and cuts with "…" rather than running under the badge */
 .head-strip .stat.title { flex: 0 1 auto; min-width: 90px; overflow: hidden; }
@@ -231,11 +242,12 @@ pre.out { margin: 0; font-family: var(--mono); font-size: 12px; white-space: pre
 /* ---------- files ---------- */
 .files { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 14px; flex: 1; min-height: 0; }
 .files.preview { grid-template-columns: 220px minmax(0, 1.15fr) minmax(0, 1fr); }
-.mount { padding: 10px 14px; border-bottom: 1px solid var(--line); cursor: pointer; display: grid; gap: 2px; }
+.mount { padding: 10px 14px; border-bottom: 1px solid var(--line); cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
 .mount:hover { background: var(--hover); }
 .mount.on { background: var(--soft); }
 .mount .dest { font-weight: 600; overflow-wrap: anywhere; }
-.mount .src { font-family: var(--mono); font-size: 11.5px; color: var(--muted); overflow-wrap: anywhere; }
+.mount .src { font-family: var(--mono); font-size: 11.5px; color: var(--muted); word-break: break-all; }
+.mount > * { min-width: 0; overflow-wrap: anywhere; }
 .pathbar { display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; white-space: nowrap; font-family: var(--mono); font-size: 12px; flex: 1; }
 .pathbar a { color: var(--muted); }
 .pathbar a:hover { color: var(--text); text-decoration: underline; }
@@ -279,5 +291,6 @@ dialog .d-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12
   .files { grid-template-columns: 240px minmax(0, 1fr); }
   .files.preview { grid-template-columns: 190px minmax(0, 1.1fr) minmax(0, 1fr); }
   .db { grid-template-columns: 230px minmax(0, 1fr); }
+  .logs { grid-template-columns: 230px minmax(0, 1fr); }
   .big { font-size: 21px; }
 }

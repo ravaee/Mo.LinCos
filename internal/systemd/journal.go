@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os/exec"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -28,7 +29,7 @@ type JournalOptions struct {
 // Journal reads the journal with journalctl, oldest line first. emit is called
 // for each line until the output ends, emit returns false or ctx ends.
 func Journal(ctx context.Context, opt JournalOptions, emit func(Entry) bool) error {
-	args := []string{"--no-pager", "-o", "json", "--output-fields=MESSAGE,PRIORITY"}
+	args := []string{"--no-pager", "-o", "json", "--output-fields=MESSAGE,PRIORITY,SYSLOG_IDENTIFIER"}
 	if opt.Unit != "" {
 		args = append(args, "-u", opt.Unit)
 	}
@@ -60,7 +61,7 @@ func Journal(ctx context.Context, opt JournalOptions, emit func(Entry) bool) err
 	sc.Buffer(make([]byte, 64<<10), 4<<20)
 	var back []Entry // backwards reads are collected, then given oldest first
 	for sc.Scan() {
-		e, ok := parseEntry(sc.Bytes())
+		e, ok := parseEntry(sc.Bytes(), opt.Unit == "")
 		if !ok {
 			continue
 		}
@@ -82,12 +83,15 @@ func Journal(ctx context.Context, opt JournalOptions, emit func(Entry) bool) err
 	return nil
 }
 
-func parseEntry(line []byte) (Entry, bool) {
+// parseEntry reads one line of journalctl's JSON. With who set, the text starts
+// with the program that wrote it, as in the whole system's log.
+func parseEntry(line []byte, who bool) (Entry, bool) {
 	var raw struct {
 		Time     string          `json:"__REALTIME_TIMESTAMP"`
 		Cursor   string          `json:"__CURSOR"`
 		Message  json.RawMessage `json:"MESSAGE"`
 		Priority string          `json:"PRIORITY"`
+		Ident    string          `json:"SYSLOG_IDENTIFIER"`
 	}
 	if json.Unmarshal(line, &raw) != nil {
 		return Entry{}, false
@@ -106,6 +110,10 @@ func parseEntry(line []byte) (Entry, bool) {
 			}
 		}
 		e.Text = string(b)
+	}
+	e.Text = strings.Trim(e.Text, "\r\n")
+	if who && raw.Ident != "" {
+		e.Text = raw.Ident + ": " + e.Text
 	}
 	switch raw.Priority {
 	case "0", "1", "2", "3":

@@ -3,7 +3,11 @@
 A small monitor for Linux servers. One Go binary runs on each server and you
 look at it from your computer through SSH, in a page that fits one screen:
 
-- **Overview** and **Diagnosis**: the machine in plain sentences, and a
+- **Overview**: CPU, memory, disk and network in plain words, and **Memory by
+  app**: every container and service ranked by the memory it uses, with its
+  log one click away.
+- **Logs**: the whole system, any container or any service, live.
+- **Diagnosis**: the machine in plain sentences, and a
   checklist of what is wrong (a failed service, a crashing container, a full
   disk, a program killed for lack of memory, a pending restart).
 - **Services**: each one's state and its live log.
@@ -81,8 +85,8 @@ This opens an SSH tunnel to the agent on a free local port and shows the page
 in your browser. Ctrl+C closes the tunnel. `<ssh host>` is anything `ssh`
 accepts, such as an alias from `~/.ssh/config`.
 
-On the page, the sidebar has Overview, Diagnosis, Services, Containers (by
-compose stack) and Processes. Long lists, logs and tables scroll inside their
+On the page, the sidebar has Overview, Diagnosis, Logs, Services, Containers
+(by compose stack) and Processes. Long lists, logs and tables scroll inside their
 own area; the page itself never does.
 
 - **Logs** follow the newest line, search with highlights, show problems only,

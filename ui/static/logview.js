@@ -20,7 +20,7 @@ LinCos.LogView = function (host, opt) {
       <label class="check" title="Keep showing the newest line"><input type="checkbox" class="follow" checked> Follow</label>
       <label class="check"><input type="checkbox" class="wrapit"> Wrap long lines</label>
       <span class="grow"></span>
-      <span class="muted count"></span>
+      <span class="muted count"></span>${opt.extra || ""}
       <button class="btn small dl" type="button" title="Save the lines shown as a file">Download</button>
     </div>
     <div class="scroll loglines">
@@ -80,11 +80,14 @@ LinCos.LogView = function (host, opt) {
     host.querySelector(".count").textContent = st.q || st.problems ? `${n.toLocaleString()} of ${lines.length.toLocaleString()} lines` : `${lines.length.toLocaleString()} lines`;
   }
 
+  // Stray line breaks at either end would show a line as two rows
+  const clean = (l) => { l.m = String(l.m ?? "").replace(/^[\r\n]+|[\r\n]+$/g, ""); l.lv = level(l); return l; };
+
   function append(batch) {
     let prev = lines.length ? dayOf(lines[lines.length - 1].t) : "";
     let html = "";
     for (const l of batch) {
-      l.lv = level(l);
+      clean(l);
       lines.push(l);
       if (shown(l)) {
         html += lineHTML(l, prev);
@@ -125,7 +128,7 @@ LinCos.LogView = function (host, opt) {
         btn.textContent = "No older lines";
         return;
       }
-      for (const l of fresh) l.lv = level(l);
+      fresh.forEach(clean);
       // Reading back: stay where the reader is instead of jumping to the newest line
       st.follow = false;
       host.querySelector(".follow").checked = false;

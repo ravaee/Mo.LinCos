@@ -38,6 +38,8 @@ func (a *Agent) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/containers/{id}/db/{action}", a.db)
 	mux.HandleFunc("GET /api/services/{name}/logs", a.serviceLogs)
 	mux.HandleFunc("GET /api/services/{name}/logs/stream", a.serviceLogStream)
+	mux.HandleFunc("GET /api/system/logs", a.systemLogs)
+	mux.HandleFunc("GET /api/system/logs/stream", a.systemLogStream)
 }
 
 // changesGuard lets a request that changes something through only when it
@@ -226,6 +228,26 @@ func (a *Agent) serviceLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, lines)
+}
+
+// systemLogs and systemLogStream are the whole system's journal: every service,
+// the kernel and everything else that logs to journald.
+func (a *Agent) systemLogs(w http.ResponseWriter, r *http.Request) {
+	lines := []systemd.Entry{}
+	err := systemd.Journal(r.Context(), systemd.JournalOptions{Lines: logCount(r, 500), Before: r.URL.Query().Get("before")},
+		func(e systemd.Entry) bool { lines = append(lines, e); return true })
+	if err != nil {
+		fail(w, http.StatusBadGateway, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, lines)
+}
+
+func (a *Agent) systemLogStream(w http.ResponseWriter, r *http.Request) {
+	streamLines(w, r, func(ctx context.Context, emit func(any) bool) error {
+		return systemd.Journal(ctx, systemd.JournalOptions{Lines: logCount(r, 500), Follow: true},
+			func(e systemd.Entry) bool { return emit(e) })
+	})
 }
 
 func (a *Agent) serviceLogStream(w http.ResponseWriter, r *http.Request) {

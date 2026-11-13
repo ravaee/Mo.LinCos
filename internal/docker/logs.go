@@ -109,11 +109,12 @@ func readLines(r io.Reader, stream string, emit func(Line) bool) error {
 }
 
 // parseLine splits "2026-11-13T17:00:00.123456789Z message" into time and text.
+// Some programs (SQL Server among them) begin or end lines with stray carriage
+// returns and line feeds; those are dropped so each line shows as one row.
 func parseLine(s, stream string) Line {
-	s = strings.TrimSuffix(s, "\r")
 	t, text, ok := strings.Cut(s, " ")
 	if !ok || len(t) < 20 || t[4] != '-' {
-		return Line{Stream: stream, Text: s}
+		return Line{Stream: stream, Text: strings.Trim(s, "\r\n")}
 	}
-	return Line{Time: t, Stream: stream, Text: text}
+	return Line{Time: t, Stream: stream, Text: strings.Trim(text, "\r\n")}
 }

@@ -78,6 +78,23 @@ const LinCos = (() => {
     return ["off", v.sub || v.active];
   }
 
+  // Every running container and service with the memory and CPU it uses,
+  // biggest first: what "which app uses the memory" means
+  function apps(s) {
+    const list = [];
+    for (const c of s.containers || []) {
+      if (c.state !== "running") continue;
+      list.push({ kind: "container", name: c.name, mem: c.memory, cpu: c.cpu, cls: containerState(c)[0],
+        page: `#/containers/${short(c.id)}`, log: `#/logs/container/${short(c.id)}` });
+    }
+    for (const v of s.services || []) {
+      if (!v.memory || v.active === "inactive") continue;
+      list.push({ kind: "service", name: svc(v.name), mem: v.memory, cpu: v.cpu, cls: serviceState(v)[0],
+        page: `#/services/${v.name}`, log: `#/logs/service/${v.name}` });
+    }
+    return list.sort((a, b) => b.mem - a.mem);
+  }
+
   // ---------- talking to the agent ----------
   async function api(path, opt = {}) {
     const init = { method: opt.method || "GET", headers: {} };
@@ -168,6 +185,7 @@ const LinCos = (() => {
       `<a class="nav-item ${on ? "on" : ""}" href="${href}">${label}${count !== undefined && count !== "" ? `<span class="count ${cls}">${count}</span>` : ""}</a>`;
     let html = item("#/overview", "Overview", r.name === "overview")
       + item("#/diagnosis", "Diagnosis", r.name === "diagnosis", bad || warn || (s ? "✓" : ""), bad ? "bad" : warn ? "warn" : "")
+      + item("#/logs", "Logs", r.name === "logs")
       + item("#/services", "Services", r.name === "services", failed ? `${failed} failed` : (s?.services || []).filter((v) => v.sub === "running").length || "", failed ? "bad" : "")
       + item("#/containers", "Containers", r.name === "containers" && !r.parts[0], ctrs.length || "");
     const groups = new Map();
@@ -247,7 +265,7 @@ const LinCos = (() => {
   }
 
   return {
-    S, views, start, route, api, toast, confirmDialog, renderCrumbs,
+    S, views, start, route, api, toast, confirmDialog, renderCrumbs, apps,
     esc, bytes, rate, pct, pct1, duration, since, ago, when, short, svc, spark, bar, levelColor, containerState, serviceState,
   };
 })();

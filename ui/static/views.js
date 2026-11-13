@@ -30,7 +30,7 @@
       el.innerHTML = `<section class="vitals" id="vitals"></section>
         <section class="overview-grid">
           <div class="panel"><div class="panel-head"><h2>Health</h2><a class="more" href="#/diagnosis">All checks ›</a></div><div class="scroll" id="ovHealth"></div></div>
-          <div class="panel"><div class="panel-head"><h2>Containers</h2><a class="more" href="#/containers">All containers ›</a></div><div class="scroll" id="ovContainers"></div></div>
+          <div class="panel"><div class="panel-head"><h2>Memory by app</h2><a class="more" href="#/logs">All logs ›</a></div><div class="memsum" id="ovMemSum"></div><div class="scroll" id="ovApps"></div></div>
           <div class="panel"><div class="panel-head"><h2>Busiest programs</h2><a class="more" href="#/processes">All processes ›</a></div><div class="scroll" id="ovProcs"></div></div>
         </section>`;
     },
@@ -78,14 +78,23 @@
         (issues.length ? issues.map(findingHTML).join("") : `<div class="finding ok"><span class="icon ok">✓</span><span class="title">Everything checked is fine</span></div>`)
         + (fine.length ? `<div class="section-title">Fine</div>` + fine.map(findingHTML).join("") : "");
 
-      const ctrs = s.containers || [];
-      document.getElementById("ovContainers").innerHTML = ctrs.length ? `<table class="grid"><tbody>${ctrs.map((c) => {
-        const [cls, word] = containerState(c);
-        return `<tr class="click" onclick="location.hash='#/containers/${short(c.id)}'">
-          <td class="cut"><span class="dot ${cls}"></span> <b>${esc(c.name)}</b> <span class="muted">${esc(word)}</span></td>
-          <td class="num">${c.state === "running" ? pct1(c.cpu) : ""}</td>
-          <td class="num">${c.state === "running" ? bytes(c.memory) : ""}</td></tr>`;
-      }).join("")}</tbody></table>` : `<div class="empty">No containers, or Docker is not installed.</div>`;
+      // Memory by app: every running container and service, biggest first, with
+      // what is left over for Linux itself and programs outside both
+      const apps = L.apps(s);
+      const appSum = apps.reduce((a, x) => a + x.mem, 0);
+      const rest = Math.max(0, used - appSum);
+      const ctrMem = apps.filter((x) => x.kind === "container").reduce((a, x) => a + x.mem, 0);
+      document.getElementById("ovMemSum").innerHTML = `
+        <div class="say"><b>${bytes(used)}</b> used of ${bytes(m.total)}: <span style="color:var(--cpu)">containers</span> <b>${bytes(ctrMem)}</b> · <span style="color:var(--mem)">services</span> <b>${bytes(appSum - ctrMem)}</b> · Linux and the rest <b>${bytes(rest)}</b></div>
+        ${bar([[ctrMem / m.total * 100, "var(--cpu)"], [(appSum - ctrMem) / m.total * 100, "var(--mem)"], [rest / m.total * 100, "color-mix(in srgb, var(--muted) 45%, transparent)"]])}`;
+      document.getElementById("ovApps").innerHTML = `<table class="grid"><tbody>${apps.map((x) => `<tr>
+          <td class="cut" title="${x.kind}"><span class="dot ${x.cls}"></span> <a href="${x.page}"><b>${esc(x.name)}</b></a></td>
+          <td class="num"><span class="share" title="${pct(x.mem / used * 100)} of the memory in use">${bar([[x.mem / used * 100, x.kind === "container" ? "var(--cpu)" : "var(--mem)"]])}</span></td>
+          <td class="num"><b>${bytes(x.mem)}</b></td>
+          <td class="num muted">${pct1(x.cpu)}</td>
+          <td class="num"><a class="btn small" href="${x.log}">Log</a></td></tr>`).join("")}
+        <tr><td class="cut muted">Linux and everything else</td><td></td><td class="num">${bytes(rest)}</td><td></td><td></td></tr>
+      </tbody></table>`;
 
       const procs = [...s.processes].sort((a, b) => (b.cpu - a.cpu) || (b.rss - a.rss)).slice(0, 12);
       document.getElementById("ovProcs").innerHTML = `<table class="grid"><tbody>${procs.map((p) => `<tr>
@@ -195,6 +204,86 @@
         <div class="stat"><span>PID</span><b class="mono">${v.pid || "–"}</b></div>
         <div class="stat"><span>Starts with server</span><b>${v.enabled === "enabled" ? "yes" : v.enabled === "static" ? "when needed" : v.enabled || "–"}</b></div>`;
     },
+  };
+
+  // ---------- Logs ----------
+  // #/logs/system, #/logs/container/<id>, #/logs/service/<name>
+  let logState = { src: "", q: "", log: null };
+
+  const sources = (s) => {
+    const list = [{ id: "system", name: "Whole system", kind: "system", cls: "", sub: "all programs" }];
+    for (const c of s?.containers || []) {
+      const [cls] = containerState(c);
+      list.push({ id: `container/${short(c.id)}`, name: c.name, kind: "container", cls, sub: c.project || "", page: `#/containers/${short(c.id)}` });
+    }
+    const svcs = (s?.services || []).filter((v) => v.sub === "running" || v.active === "failed")
+      .sort((a, b) => (b.active === "failed") - (a.active === "failed") || a.name.localeCompare(b.name));
+    for (const v of svcs) {
+      const [cls] = serviceState(v);
+      list.push({ id: `service/${v.name}`, name: svc(v.name), kind: "service", cls, sub: v.active === "failed" ? "failed" : "", page: `#/services/${v.name}`, unit: v.name });
+    }
+    return list;
+  };
+
+  L.views.logs = {
+    title: "Logs",
+    key: () => "logs",
+    crumbs: (parts, s) => {
+      const id = parts.join("/");
+      const x = sources(s).find((y) => y.id === id);
+      return id ? [["Logs", "#/logs"], x ? x.name : parts[parts.length - 1]] : ["Logs"];
+    },
+    mount(el, parts) {
+      el.innerHTML = `<div class="logs">
+        <div class="panel">
+          <div class="panel-head"><input class="input" id="logQ" type="search" placeholder="Find a container or service" style="flex:1"></div>
+          <div class="scroll" id="logSrc"></div>
+        </div>
+        <div class="logview" id="logBox"></div>
+      </div>`;
+      el.querySelector("#logQ").addEventListener("input", (e) => { logState.q = e.target.value.toLowerCase(); this.list(L.S.snap); });
+      this.route(parts);
+    },
+    route(parts) {
+      const src = parts.join("/") || "system";
+      if (src === logState.src && logState.log) return;
+      logState.log?.close();
+      logState.src = src;
+      const [kind, ...rest] = src.split("/");
+      const name = rest.join("/");
+      let stream, older, page = "";
+      if (kind === "container") {
+        stream = `api/containers/${encodeURIComponent(name)}/logs/stream?tail=500`;
+        older = (first) => `api/containers/${encodeURIComponent(name)}/logs?tail=500&until=${encodeURIComponent(first.t)}`;
+        page = `#/containers/${encodeURIComponent(name)}`;
+      } else if (kind === "service") {
+        stream = `api/services/${encodeURIComponent(name)}/logs/stream?tail=500`;
+        older = (first) => `api/services/${encodeURIComponent(name)}/logs?tail=500&before=${encodeURIComponent(first.c)}`;
+        page = `#/services/${encodeURIComponent(name)}`;
+      } else {
+        stream = "api/system/logs/stream?tail=500";
+        older = (first) => `api/system/logs?tail=500&before=${encodeURIComponent(first.c)}`;
+      }
+      logState.log = L.LogView(document.getElementById("logBox"), {
+        name: name || "system", stream, older,
+        extra: page ? `<a class="btn small" href="${page}">Open its page ›</a>` : "",
+      });
+      this.list(L.S.snap);
+    },
+    unmount() { logState.log?.close(); logState.log = null; logState.src = ""; },
+    list(s) {
+      const box = document.getElementById("logSrc");
+      if (!box) return;
+      const all = sources(s).filter((x) => !logState.q || x.kind === "system" || x.name.toLowerCase().includes(logState.q));
+      let html = "", section = "";
+      for (const x of all) {
+        const title = x.kind === "container" ? "Containers" : x.kind === "service" ? "Services" : "";
+        if (title && title !== section) { html += `<div class="section-title">${title}</div>`; section = title; }
+        html += `<a class="logsrc ${x.id === logState.src ? "on" : ""}" href="#/logs/${esc(x.id)}">${x.kind === "system" ? "" : `<span class="dot ${x.cls}"></span>`}<span class="name">${esc(x.name)}</span>${x.sub ? `<span class="muted">${esc(x.sub)}</span>` : ""}</a>`;
+      }
+      box.innerHTML = html;
+    },
+    update(s) { this.list(s); },
   };
 
   // ---------- Processes ----------

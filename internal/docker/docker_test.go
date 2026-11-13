@@ -80,3 +80,10 @@ func TestMatters(t *testing.T) {
 		}
 	}
 }
+
+func TestParseLineDropsStrayLineBreaks(t *testing.T) {
+	l := parseLine("2026-11-13T17:53:34.10Z \r\n2026-11-13 17:53:34.10 spid55 Starting up\r", "out")
+	if l.Time != "2026-11-13T17:53:34.10Z" || l.Text != "2026-11-13 17:53:34.10 spid55 Starting up" {
+		t.Errorf("line = %+v", l)
+	}
+}
