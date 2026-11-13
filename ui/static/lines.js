@@ -1,5 +1,6 @@
 // The log viewer used for containers and services: live lines over Server-Sent
 // Events, search, problems only, follow the newest line, and reading further back.
+// Not called logview.js: browser ad blockers block a file by that name.
 "use strict";
 
 LinCos.LogView = function (host, opt) {
