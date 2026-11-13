@@ -1,0 +1,40 @@
+# LinCos agent. Install with `make install HOST=<ssh host>`, or by hand:
+#   cp lincos /usr/local/bin/ && cp lincos.service /etc/systemd/system/
+#   systemctl daemon-reload && systemctl enable --now lincos
+
+[Unit]
+Description=LinCos monitoring agent
+Documentation=https://github.com/ravaee/Mo.LinCos
+After=network.target docker.service
+
+[Service]
+ExecStart=/usr/local/bin/lincos agent
+Restart=on-failure
+RestartSec=5
+
+# Light by design: a soft cap for the Go runtime, a hard one from the kernel,
+# and the lowest priority, so it never competes with what it watches
+Environment=GOMEMLIMIT=32MiB
+MemoryMax=64M
+Nice=10
+CPUWeight=20
+IOSchedulingClass=idle
+
+# It runs as root to see every process and container, but only reads:
+# the whole filesystem is read-only to it
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+RestrictRealtime=yes
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

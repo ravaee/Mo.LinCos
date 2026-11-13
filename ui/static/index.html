@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LinCos</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2322a06b'/%3E%3Cpath d='M3 10l3-3 2 2 5-5' stroke='white' stroke-width='1.8' fill='none'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">LinCos</div>
+  <div class="hostline" id="hostline">connecting…</div>
+  <div class="spacer"></div>
+  <div class="agent" id="agent"></div>
+  <button id="pause" type="button" title="Freeze the numbers to read them (P)">Pause</button>
+  <div class="live" id="live"><span class="dot"></span><span id="liveText">connecting</span></div>
+</header>
+
+<main>
+  <div class="errors" id="errors" hidden></div>
+
+  <section class="cards" id="cards"></section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Containers</h2>
+      <span class="muted" id="ctrSummary"></span>
+    </div>
+    <div class="table-wrap"><table class="grid" id="containers"></table></div>
+  </section>
+
+  <div class="columns">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Services</h2>
+        <div class="chips" id="svcFilter">
+          <button type="button" data-v="running" class="on">Running</button>
+          <button type="button" data-v="failed">Failed</button>
+          <button type="button" data-v="all">All</button>
+        </div>
+        <span class="muted" id="svcSummary"></span>
+      </div>
+      <div class="table-wrap"><table class="grid" id="services"></table></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Processes</h2>
+        <input id="procSearch" type="search" placeholder="Filter by name, command, user or owner" autocomplete="off">
+        <span class="muted" id="procSummary"></span>
+      </div>
+      <div class="table-wrap"><table class="grid" id="processes"></table></div>
+    </section>
+  </div>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
