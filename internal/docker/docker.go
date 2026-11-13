@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -72,22 +73,81 @@ func (c *Client) List(ctx context.Context) ([]Summary, error) {
 // Details is the part of GET /containers/{id}/json the agent uses.
 type Details struct {
 	ID           string `json:"Id"`
+	Name         string `json:"Name"`
+	Created      string `json:"Created"`
 	RestartCount int    `json:"RestartCount"`
 	LogPath      string `json:"LogPath"`
 	State        struct {
-		Pid       int    `json:"Pid"`
-		StartedAt string `json:"StartedAt"`
-		ExitCode  int    `json:"ExitCode"`
-		Health    *struct {
+		Status     string `json:"Status"`
+		Pid        int    `json:"Pid"`
+		StartedAt  string `json:"StartedAt"`
+		FinishedAt string `json:"FinishedAt"`
+		ExitCode   int    `json:"ExitCode"`
+		OOMKilled  bool   `json:"OOMKilled"`
+		Error      string `json:"Error"`
+		Health     *struct {
 			Status string `json:"Status"`
+			Log    []struct {
+				End      string `json:"End"`
+				ExitCode int    `json:"ExitCode"`
+				Output   string `json:"Output"`
+			} `json:"Log"`
 		} `json:"Health"`
 	} `json:"State"`
+	Config struct {
+		Image      string            `json:"Image"`
+		Cmd        []string          `json:"Cmd"`
+		Entrypoint []string          `json:"Entrypoint"`
+		Env        []string          `json:"Env"` // holds secrets: never sent to the page as is
+		Labels     map[string]string `json:"Labels"`
+		WorkingDir string            `json:"WorkingDir"`
+		User       string            `json:"User"`
+		Tty        bool              `json:"Tty"`
+	} `json:"Config"`
 	HostConfig struct {
 		LogConfig struct {
 			Type string `json:"Type"`
 		} `json:"LogConfig"`
+		RestartPolicy struct {
+			Name string `json:"Name"`
+		} `json:"RestartPolicy"`
+		NetworkMode string `json:"NetworkMode"`
+		Memory      int64  `json:"Memory"`
 	} `json:"HostConfig"`
+	NetworkSettings struct {
+		Networks map[string]struct {
+			IPAddress string `json:"IPAddress"`
+		} `json:"Networks"`
+		Ports map[string][]struct {
+			HostIP   string `json:"HostIp"`
+			HostPort string `json:"HostPort"`
+		} `json:"Ports"`
+	} `json:"NetworkSettings"`
 	Mounts []Mount `json:"Mounts"`
+}
+
+// IP is the container's address on its first network, or 127.0.0.1 when it
+// shares the host's network.
+func (d Details) IP() string {
+	if d.HostConfig.NetworkMode == "host" {
+		return "127.0.0.1"
+	}
+	for _, n := range d.NetworkSettings.Networks {
+		if n.IPAddress != "" {
+			return n.IPAddress
+		}
+	}
+	return ""
+}
+
+// Env returns the value of one environment variable of the container.
+func (d Details) Env(name string) (string, bool) {
+	for _, kv := range d.Config.Env {
+		if k, v, ok := strings.Cut(kv, "="); ok && k == name {
+			return v, true
+		}
+	}
+	return "", false
 }
 
 // Mount is a folder or volume bound into a container. Source is the path on the
@@ -98,6 +158,12 @@ type Mount struct {
 	Source      string `json:"Source"`
 	Destination string `json:"Destination"`
 	RW          bool   `json:"RW"`
+}
+
+// SortMounts puts mounts in order of their path inside the container. Docker
+// returns them in a different order on every call.
+func SortMounts(m []Mount) {
+	sort.Slice(m, func(i, j int) bool { return m[i].Destination < m[j].Destination })
 }
 
 func (c *Client) Inspect(ctx context.Context, id string) (Details, error) {

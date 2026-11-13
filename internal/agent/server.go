@@ -122,7 +122,8 @@ func (a *Agent) Handler() http.Handler {
 		json.NewEncoder(w).Encode(a.fresh(r.Context()))
 	})
 	mux.HandleFunc("GET /api/stream", a.stream)
-	return localOnly(mux)
+	a.routes(mux)
+	return localOnly(changesGuard(mux))
 }
 
 // stream sends a snapshot to the page every interval as Server-Sent Events.

@@ -54,3 +54,15 @@ func TestParseDetails(t *testing.T) {
 		t.Errorf("backup = %+v", b)
 	}
 }
+
+func TestParseEntry(t *testing.T) {
+	e, ok := parseEntry([]byte(`{"__REALTIME_TIMESTAMP":"1794590221620494","__CURSOR":"s=1;i=2","MESSAGE":"(root) CMD (run-parts)","PRIORITY":"3"}`))
+	if !ok || e.Text != "(root) CMD (run-parts)" || e.Stream != "err" || e.Cursor != "s=1;i=2" || e.Time != "2026-11-13T17:17:01.620494Z" {
+		t.Errorf("entry = %+v", e)
+	}
+	// A message that is not valid UTF-8 comes as an array of bytes
+	e, ok = parseEntry([]byte(`{"__REALTIME_TIMESTAMP":"1","MESSAGE":[104,105],"PRIORITY":"6"}`))
+	if !ok || e.Text != "hi" || e.Stream != "out" {
+		t.Errorf("byte message = %+v", e)
+	}
+}

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"sync/atomic"
@@ -59,6 +60,9 @@ type Sampler struct {
 	containerList []docker.Summary
 	listedAt      time.Time
 	listDirty     atomic.Bool
+
+	extra   extraChecks
+	zombies int
 
 	// systemctl is the most expensive read, so the list of services is refreshed
 	// less often than the rest and their details only when a state changes. CPU
@@ -180,6 +184,8 @@ func (s *Sampler) Take(ctx context.Context) Snapshot {
 	names := s.containers(ctx, &snap, elapsed, fail)
 	s.processes(&snap, elapsed, names, fail)
 	s.servicesInto(ctx, &snap, elapsed, fail)
+	s.refreshExtra(ctx)
+	snap.Findings = diagnose(snap, s.extra, s.zombies)
 
 	snap.Agent = AgentInfo{
 		Version:  s.version,
@@ -239,7 +245,7 @@ func (s *Sampler) containers(ctx context.Context, snap *Snapshot, elapsed float6
 		ct := Container{
 			ID: c.ID, Name: c.Name(), Image: c.Image, Project: c.Project(), Service: c.Service(),
 			State: c.State, Status: c.Status, Restarts: d.RestartCount, ExitCode: d.State.ExitCode,
-			LogDriver: d.HostConfig.LogConfig.Type, LogPath: d.LogPath, Mounts: d.Mounts,
+			LogDriver: d.HostConfig.LogConfig.Type, LogPath: d.LogPath, Mounts: d.Mounts, OOMKilled: d.State.OOMKilled,
 		}
 		if c.State == "running" {
 			ct.StartedAt = d.State.StartedAt
@@ -250,6 +256,8 @@ func (s *Sampler) containers(ctx context.Context, snap *Snapshot, elapsed float6
 		if ct.Mounts == nil {
 			ct.Mounts = []docker.Mount{}
 		}
+		ct.Mounts = slices.Clone(ct.Mounts) // the cached details stay as they are
+		docker.SortMounts(ct.Mounts)
 		if u, ok := docker.ReadUsage(s.paths.Cgroup, c.ID); ok {
 			ct.Memory, ct.MemLimit, ct.Pids = u.Memory, u.Limit, u.Pids
 			if p, ok := s.ctrs[c.ID]; ok && elapsed > 0 && u.CPUMicros >= p {
@@ -289,7 +297,11 @@ func (s *Sampler) processes(snap *Snapshot, elapsed float64, containerNames map[
 	s.fixed = fixed
 	next := make(map[host.ProcessKey]uint64, len(list))
 	all := make([]Process, 0, len(list))
+	s.zombies = 0
 	for _, p := range list {
+		if p.State == "Z" {
+			s.zombies++
+		}
 		key := host.ProcessKey{PID: p.PID, Start: p.StartTicks}
 		pr := Process{
 			PID: p.PID, PPID: p.PPID, Name: p.Name, Cmd: p.Cmd, State: p.State,

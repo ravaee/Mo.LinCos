@@ -8,53 +8,30 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="top">
-  <div class="brand">LinCos</div>
-  <div class="hostline" id="hostline">connecting…</div>
-  <div class="spacer"></div>
-  <div class="agent" id="agent"></div>
-  <button id="pause" type="button" title="Freeze the numbers to read them (P)">Pause</button>
-  <div class="live" id="live"><span class="dot"></span><span id="liveText">connecting</span></div>
-</header>
-
-<main>
-  <div class="errors" id="errors" hidden></div>
-
-  <section class="cards" id="cards"></section>
-
-  <section class="panel">
-    <div class="panel-head">
-      <h2>Containers</h2>
-      <span class="muted" id="ctrSummary"></span>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><span class="logo"></span>LinCos</div>
+    <nav id="nav"></nav>
+    <div class="side-foot">
+      <div class="live" id="live"><span class="dot"></span><span id="liveText">connecting</span></div>
+      <div class="agent" id="agent"></div>
+      <button id="pause" type="button" title="Freeze the numbers to read them (P)">Pause</button>
     </div>
-    <div class="table-wrap"><table class="grid" id="containers"></table></div>
+  </aside>
+  <section class="main">
+    <header class="top">
+      <div class="crumbs" id="crumbs"></div>
+      <div class="hostline" id="hostline"></div>
+    </header>
+    <div class="view" id="view"></div>
   </section>
-
-  <div class="columns">
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Services</h2>
-        <div class="chips" id="svcFilter">
-          <button type="button" data-v="running" class="on">Running</button>
-          <button type="button" data-v="failed">Failed</button>
-          <button type="button" data-v="all">All</button>
-        </div>
-        <span class="muted" id="svcSummary"></span>
-      </div>
-      <div class="table-wrap"><table class="grid" id="services"></table></div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Processes</h2>
-        <input id="procSearch" type="search" placeholder="Filter by name, command, user or owner" autocomplete="off">
-        <span class="muted" id="procSummary"></span>
-      </div>
-      <div class="table-wrap"><table class="grid" id="processes"></table></div>
-    </section>
-  </div>
-</main>
-
+</div>
+<dialog id="dialog"></dialog>
+<div class="toasts" id="toasts"></div>
 <script src="app.js"></script>
+<script src="logview.js"></script>
+<script src="views.js"></script>
+<script src="container.js"></script>
+<script>LinCos.start()</script>
 </body>
 </html>

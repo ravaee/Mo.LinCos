@@ -7,7 +7,8 @@ VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS  = -s -w -X main.version=$(VERSION)
 GOBUILD  = CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)"
 
-.PHONY: test build mac install
+.PHONY: test build mac install FORCE
+FORCE:
 
 test:
 	go vet ./...
@@ -19,8 +20,9 @@ TARGETS = linux-amd64 linux-arm64 darwin-arm64 darwin-amd64 windows-amd64 window
 build: $(foreach t,$(TARGETS),dist/lincos-$(t)$(if $(findstring windows,$(t)),.exe))
 	cp deploy/lincos.service dist/
 
-.PHONY: dist/lincos-%
-dist/lincos-%:
+# FORCE: always rebuild, since make can't see Go's own dependencies (.PHONY
+# does not apply to pattern rules)
+dist/lincos-%: FORCE
 	GOOS=$(word 1,$(subst -, ,$(basename $*))) GOARCH=$(word 2,$(subst -, ,$(basename $*))) $(GOBUILD) -o $@ ./cmd/lincos
 
 mac:

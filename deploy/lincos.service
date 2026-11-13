@@ -18,10 +18,12 @@ Nice=10
 CPUWeight=20
 IOSchedulingClass=idle
 
-# It runs as root to see every process and container, but only reads:
-# the whole filesystem is read-only to it
+# It runs as root to see every process and container. The system itself
+# (/usr, /boot, /etc) and home folders are read-only to it; data folders such
+# as /var, /srv, /opt and other top-level folders stay writable, so files can
+# be deleted or uploaded from a container's Files tab
 NoNewPrivileges=yes
-ProtectSystem=strict
+ProtectSystem=full
 ProtectHome=read-only
 PrivateTmp=yes
 ProtectKernelTunables=yes

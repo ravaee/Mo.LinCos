@@ -21,6 +21,7 @@ type Snapshot struct {
 	Containers []Container `json:"containers"`
 	Services   []Service   `json:"services"`
 	Processes  []Process   `json:"processes"`
+	Findings   []Finding   `json:"findings"`
 	Agent      AgentInfo   `json:"agent"`
 	Errors     []string    `json:"errors,omitempty"` // sources that could not be read this time
 }
@@ -69,6 +70,7 @@ type Container struct {
 	Restarts  int            `json:"restarts"`
 	StartedAt string         `json:"startedAt,omitempty"`
 	ExitCode  int            `json:"exitCode"`
+	OOMKilled bool           `json:"oomKilled,omitempty"`
 	CPU       float64        `json:"cpu"` // % of one core, as top shows it
 	Memory    uint64         `json:"memory"`
 	MemLimit  uint64         `json:"memLimit"`

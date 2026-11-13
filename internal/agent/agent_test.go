@@ -73,3 +73,33 @@ func TestBusiestKeepsCPUAndMemoryHogs(t *testing.T) {
 		t.Error("the idle process using the most memory was dropped")
 	}
 }
+
+// A page on another site can make the browser POST to the agent's address, but
+// not with the X-LinCos header, so nothing it sends can change anything
+func TestChangesNeedTheHeader(t *testing.T) {
+	a := New(NewSampler(DefaultPaths(), "test"), time.Second, fstest.MapFS{"index.html": {Data: []byte("hi")}})
+	h := a.Handler()
+	cases := []struct {
+		header, origin string
+		want           int
+	}{
+		{"", "", http.StatusForbidden},
+		{"1", "http://evil.example", http.StatusForbidden},
+		{"1", "http://127.0.0.1:7070", http.StatusNotFound}, // passes the guard; there is no container "x"
+	}
+	for _, c := range cases {
+		req := httptest.NewRequest(http.MethodPost, "/api/containers/x/files/delete?mount=0&path=a", nil)
+		req.Host = "127.0.0.1:7070"
+		if c.header != "" {
+			req.Header.Set("X-LinCos", c.header)
+		}
+		if c.origin != "" {
+			req.Header.Set("Origin", c.origin)
+		}
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		if rec.Code != c.want {
+			t.Errorf("header %q origin %q: status %d, want %d", c.header, c.origin, rec.Code, c.want)
+		}
+	}
+}
