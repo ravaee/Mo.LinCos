@@ -1,6 +1,4 @@
-# LinCos agent. Install with `make install HOST=<ssh host>`, or by hand:
-#   cp lincos /usr/local/bin/ && cp lincos.service /etc/systemd/system/
-#   systemctl daemon-reload && systemctl enable --now lincos
+# LinCos agent. install/server.sh installs it; see the README.
 
 [Unit]
 Description=LinCos monitoring agent

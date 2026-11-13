@@ -1,5 +1,5 @@
 # make test                   vet and test everything
-# make build                  binaries for Linux (amd64, arm64) and macOS (arm64) in dist/
+# make build                  every release binary in dist/: Linux, macOS, Windows
 # make mac                    just the Mac binary, dist/lincos
 # make install HOST=<ssh>     build for that server, install the agent and (re)start it
 
@@ -7,20 +7,21 @@ VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS  = -s -w -X main.version=$(VERSION)
 GOBUILD  = CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)"
 
-.PHONY: test build mac install dist/lincos-linux-amd64 dist/lincos-linux-arm64 dist/lincos-darwin-arm64
+.PHONY: test build mac install
 
 test:
 	go vet ./...
 	go test ./...
 
-build: dist/lincos-linux-amd64 dist/lincos-linux-arm64 dist/lincos-darwin-arm64
+# The agent runs on Linux; the lincos command (lincos open) on all three
+TARGETS = linux-amd64 linux-arm64 darwin-arm64 darwin-amd64 windows-amd64 windows-arm64
 
-dist/lincos-linux-amd64:
-	GOOS=linux GOARCH=amd64 $(GOBUILD) -o $@ ./cmd/lincos
-dist/lincos-linux-arm64:
-	GOOS=linux GOARCH=arm64 $(GOBUILD) -o $@ ./cmd/lincos
-dist/lincos-darwin-arm64:
-	GOOS=darwin GOARCH=arm64 $(GOBUILD) -o $@ ./cmd/lincos
+build: $(foreach t,$(TARGETS),dist/lincos-$(t)$(if $(findstring windows,$(t)),.exe))
+	cp deploy/lincos.service dist/
+
+.PHONY: dist/lincos-%
+dist/lincos-%:
+	GOOS=$(word 1,$(subst -, ,$(basename $*))) GOARCH=$(word 2,$(subst -, ,$(basename $*))) $(GOBUILD) -o $@ ./cmd/lincos
 
 mac:
 	$(GOBUILD) -o dist/lincos ./cmd/lincos

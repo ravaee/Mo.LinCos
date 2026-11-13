@@ -17,13 +17,15 @@ browser  ── lincos open <host> ── SSH ──►  127.0.0.1:7070   lincos
 ## Quick start
 
 ```bash
-# On the server, as root (on ARM use lincos-linux-arm64):
-curl -fsSLo /usr/local/bin/lincos https://github.com/ravaee/Mo.LinCos/releases/latest/download/lincos-linux-amd64 && chmod +x /usr/local/bin/lincos
-curl -fsSLo /etc/systemd/system/lincos.service https://raw.githubusercontent.com/ravaee/Mo.LinCos/main/deploy/lincos.service && systemctl enable --now lincos
-# On your Mac (Apple Silicon), then open any server you can ssh to:
-sudo curl -fsSL --create-dirs -o /usr/local/bin/lincos https://github.com/ravaee/Mo.LinCos/releases/latest/download/lincos-darwin-arm64 && sudo chmod +x /usr/local/bin/lincos
+# 1. On your Linux server (installs or updates the agent):
+curl -fsSL https://raw.githubusercontent.com/ravaee/Mo.LinCos/main/install/server.sh | sudo sh
+
+# 2. On your Mac or Linux computer, then open the server:
+curl -fsSL https://raw.githubusercontent.com/ravaee/Mo.LinCos/main/install/local.sh | sh
 lincos open <ssh-host>
 ```
+
+On Windows, in PowerShell: `irm https://raw.githubusercontent.com/ravaee/Mo.LinCos/main/install/local.ps1 | iex`
 
 ## Light by design
 
@@ -51,23 +53,14 @@ Measured on a 2-core server running 4 containers and about 460 tasks:
 - **Capped.** The systemd unit sets `GOMEMLIMIT=32MiB`, `MemoryMax=64M`, the
   lowest CPU and IO priority, and a read-only view of the filesystem.
 
-## Install
+## Requirements
 
-On the server, as root. Linux with systemd and cgroup v2, amd64 or arm64.
-Docker is optional.
-
-```bash
-make install HOST=<ssh host>      # from a clone, with Go 1.27+
-```
-
-This builds for the server's architecture, copies the binary to
-`/usr/local/bin/lincos` and the unit to `/etc/systemd/system/lincos.service`,
-and (re)starts it. Without Go, take the binary from a
-[release](https://github.com/ravaee/Mo.LinCos/releases) and follow the steps
-at the top of [`deploy/lincos.service`](deploy/lincos.service).
-
-On your Mac, put the `lincos` binary (`make mac`, or `lincos-darwin-arm64` from
-a release) anywhere on your PATH.
+- **Server:** Linux with systemd and cgroup v2, amd64 or arm64. Docker is
+  optional. The agent goes to `/usr/local/bin/lincos` and runs as the
+  `lincos` service. To remove it:
+  `systemctl disable --now lincos && rm /usr/local/bin/lincos /etc/systemd/system/lincos.service`
+- **Your computer:** macOS, Linux or Windows with `ssh`, which Windows 10 and
+  later include.
 
 ## Use
 
@@ -114,8 +107,9 @@ that. systemd makes the whole filesystem read-only to it.
 ## Development
 
 ```bash
-make test     # go vet + go test
-make build    # dist/ for linux/amd64, linux/arm64, darwin/arm64
+make test                 # go vet + go test
+make build                # every release binary in dist/
+make install HOST=<ssh>   # build and install your working copy on a server
 ```
 
 Every reader takes its root (`/proc`, `/sys`, the cgroup root) as a parameter,
@@ -130,5 +124,6 @@ so the tests run on a Mac against copies of real files in `testdata/`.
 | `internal/agent` | the sampler, the HTTP server and the live stream (Server-Sent Events) |
 | `internal/client` | the Mac side: SSH tunnel and browser |
 | `ui/static` | the page: plain HTML, CSS and JavaScript, built into the binary |
+| `install` | the one-line installers for the server and your computer |
 
 MIT licensed.
