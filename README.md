@@ -14,6 +14,17 @@ browser  ── lincos open <host> ── SSH ──►  127.0.0.1:7070   lincos
                                                             └─ cgroups         CPU and memory per container and service
 ```
 
+## Quick start
+
+```bash
+# On the server, as root (on ARM use lincos-linux-arm64):
+curl -fsSLo /usr/local/bin/lincos https://github.com/ravaee/Mo.LinCos/releases/latest/download/lincos-linux-amd64 && chmod +x /usr/local/bin/lincos
+curl -fsSLo /etc/systemd/system/lincos.service https://raw.githubusercontent.com/ravaee/Mo.LinCos/main/deploy/lincos.service && systemctl enable --now lincos
+# On your Mac (Apple Silicon), then open any server you can ssh to:
+sudo curl -fsSL --create-dirs -o /usr/local/bin/lincos https://github.com/ravaee/Mo.LinCos/releases/latest/download/lincos-darwin-arm64 && sudo chmod +x /usr/local/bin/lincos
+lincos open <ssh-host>
+```
+
 ## Light by design
 
 Measured on a 2-core server running 4 containers and about 460 tasks:
