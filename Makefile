@@ -19,6 +19,7 @@ TARGETS = linux-amd64 linux-arm64 darwin-arm64 darwin-amd64 windows-amd64 window
 
 build: $(foreach t,$(TARGETS),dist/lincos-$(t)$(if $(findstring windows,$(t)),.exe))
 	cp deploy/lincos.service dist/
+	cd dist && rm -f SHA256SUMS && shasum -a 256 lincos-* lincos.service > SHA256SUMS
 
 # FORCE: always rebuild, since make can't see Go's own dependencies (.PHONY
 # does not apply to pattern rules)

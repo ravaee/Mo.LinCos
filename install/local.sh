@@ -1,8 +1,12 @@
 #!/bin/sh
-# Installs or updates the lincos command on your Mac or Linux computer:
+# Installs or updates the lincos command on your Mac or Linux computer.
+# Download it, read it, then run it:
 #
-#   curl -fsSL https://raw.githubusercontent.com/ravaee/Mo.LinCos/main/install/local.sh | sh
+#   curl -fsSLO https://raw.githubusercontent.com/ravaee/Mo.LinCos/main/install/local.sh
+#   less local.sh
+#   sh local.sh
 #
+# It installs the binary only if its SHA-256 matches the release's SHA256SUMS.
 # Then: lincos open <any server you can ssh to that runs the agent>
 set -eu
 
@@ -13,6 +17,15 @@ download() {
   if command -v curl >/dev/null 2>&1; then curl -fsSL -o "$2" "$1"
   elif command -v wget >/dev/null 2>&1; then wget -qO "$2" "$1"
   else fail "needs curl or wget"; fi
+}
+# Checks a download against the release's SHA256SUMS, so a broken or swapped
+# file is never installed
+verify() {
+  want=$(awk -v f="$1" '$2 == f { print $1 }' "$tmp/SHA256SUMS")
+  [ -n "$want" ] || fail "$1 is not listed in SHA256SUMS"
+  if command -v sha256sum >/dev/null 2>&1; then got=$(sha256sum "$tmp/$1" | cut -d' ' -f1)
+  else got=$(shasum -a 256 "$tmp/$1" | cut -d' ' -f1); fi
+  [ "$got" = "$want" ] || fail "$1 does not match its checksum; nothing was installed"
 }
 
 case "$(uname -s)" in
@@ -39,9 +52,12 @@ fi
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-download "$RELEASE/lincos-$os-$arch" "$tmp/lincos"
+bin=lincos-$os-$arch
+download "$RELEASE/SHA256SUMS" "$tmp/SHA256SUMS"
+download "$RELEASE/$bin" "$tmp/$bin"
+verify "$bin"
 $sudo mkdir -p "$dest"
-$sudo install -m 755 "$tmp/lincos" "$dest/lincos.new"
+$sudo install -m 755 "$tmp/$bin" "$dest/lincos.new"
 $sudo mv -f "$dest/lincos.new" "$dest/lincos"
 
 echo "Installed $("$dest/lincos" version) to $dest/lincos"
